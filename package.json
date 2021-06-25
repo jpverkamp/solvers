@@ -1,0 +1,17 @@
+{
+  "name": "solver",
+  "version": "1.0.0",
+  "main": "solver.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "json-stable-stringify": "^1.0.1",
+    "object-hash": "^2.2.0"
+  }
+}
