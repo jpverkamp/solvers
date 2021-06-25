@@ -6,10 +6,12 @@ export function makeSimpleSolver({
         generateNextStates,
         isValid,
         isSolved,
-        checkDuplicates
+        checkDuplicates,
+        returnMeta
     }) {
     return (state) => {
-        let steps = 0
+        let visited = 0
+        let steps = []
 
         let duplicates = new Set()
         let dupCheck = false;
@@ -29,9 +31,8 @@ export function makeSimpleSolver({
         }
 
         let recur = () => {
-            steps++
-
-           if (dupCheck) {
+            visited++
+            if (dupCheck) {
                 let value = dupCheck(state)
                 if (duplicates.has(value)) {
                     return false
@@ -48,18 +49,22 @@ export function makeSimpleSolver({
                 return true
             }
 
-            for (let {step, unstep} of generateNextStates(state)) {
+            for (let {step, unstep, text} of generateNextStates(state)) {
                 step(state)
+                if (text) steps.push(text)
+
                 if (recur()) {
                     return true
                 } else {
                     unstep(state)
+                    if (text) steps.pop()
                 }
             }
 
             return false
         }
         recur()
-        return state
+
+        return returnMeta ? {steps, state, visited} : state
     }
 }

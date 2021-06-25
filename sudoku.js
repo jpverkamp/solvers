@@ -9,7 +9,7 @@ let getCel = (state, cel) => indexes.map(i => state[3 * Math.floor(cel / 3) + Ma
 let hasDup = (vs) => vs.some(v1 => v1 != 0 && vs.filter(v2 => v1 == v2).length != 1)
 
 let solveSudoku = makeSimpleSolver({
-    checkDuplicates: 'stable',
+    returnMeta: true,
     generateNextStates: function*(state) {
         // Find the first empty cell
         for (let i = 0; i < 9; i++) {
@@ -19,7 +19,8 @@ let solveSudoku = makeSimpleSolver({
                     for (let v = 1; v <= 9; v++) {
                         yield {
                             step: function(state) { state[i][j] = v },
-                            unstep: function(state) { state[i][j] = 0 }
+                            unstep: function(state) { state[i][j] = 0 },
+                            text: `(${i}, ${j}) => ${v}`
                         }
                     }
                     return
@@ -91,11 +92,12 @@ let test_hardest = [
     [0,9,0,0,0,0,4,0,0]
 ]
 
-let test = test_hardest
+let test = test_easy
 
 function sudokuToString(state) {
     return state.map(row => row.join('')).join('\n') + '\n'
 }
 
 console.log(sudokuToString(test))
-console.log(sudokuToString(solveSudoku(test)))
+//console.log(sudokuToString(solveSudoku(test)))
+console.log(solveSudoku(test))
