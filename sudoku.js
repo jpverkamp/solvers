@@ -1,4 +1,4 @@
-import { makeSimpleSolver } from './solver.js'
+import { makeSolver } from './solvers/recursive.js'
 
 let indexes = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 
@@ -8,7 +8,7 @@ let getCel = (state, cel) => indexes.map(i => state[3 * Math.floor(cel / 3) + Ma
 
 let hasDup = (vs) => vs.some(v1 => v1 != 0 && vs.filter(v2 => v1 == v2).length != 1)
 
-let solveSudoku = makeSimpleSolver({
+let solveSudoku = makeSolver({
     returnMeta: true,
     generateNextStates: function*(state) {
         // Find the first empty cell

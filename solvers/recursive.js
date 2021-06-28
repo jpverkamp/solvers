@@ -2,7 +2,7 @@ import objectHash from "object-hash"
 import stringify from "json-stable-stringify"
 
 // TODO: Paramaterize check duplicates
-export function makeSimpleSolver({
+export function makeSolver({
         generateNextStates,
         isValid,
         isSolved,
@@ -63,8 +63,11 @@ export function makeSimpleSolver({
 
             return false
         }
-        recur()
-
-        return returnMeta ? {steps, state, visited} : state
+        
+        if (recur()) {
+            return returnMeta ? {steps, state, visited} : state
+        } else {
+            throw 'No solution found'
+        }
     }
 }
