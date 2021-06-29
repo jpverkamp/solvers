@@ -29,9 +29,6 @@ export function makeSolver({
             dupCheck = JSON.stringify
         }
 
-
-        /* ----- */
-
         let currentNode = {
             children: [{
                 step: function(state) {},

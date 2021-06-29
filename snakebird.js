@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { makeSolver } from './solvers/stack.js'
+import { makeSolver } from './solvers/tree.js'
 
 let DEBUG = false
 let OPTIMIZE = true
