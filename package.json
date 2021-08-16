@@ -11,7 +11,10 @@
   "description": "",
   "type": "module",
   "dependencies": {
+    "immutable": "^4.0.0-rc.12",
+    "immutable-sorted": "^0.2.11",
     "json-stable-stringify": "^1.0.1",
+    "markdown-table": "^3.0.1",
     "object-hash": "^2.2.0"
   }
 }
