@@ -7,6 +7,7 @@ export function makeSolver({
     searchMode,         // [dfs(default), bfs, state -> Integer], depth/breadth first or a scoring function, higher scores first
     returnFirst,        // Boolean: Return the first solution found (false, check all and return least steps)
     debug,              // Boolean: Is debug mode set
+    progressEvery,      // Integer: Print progress every N iterations (0/undefined to disable)
     maxTime,            // Integer: If set, don't run more than this many seconds
 }) {
 
@@ -65,8 +66,7 @@ export function makeSolver({
             iterations++
             if (debug) console.log('===== ===== ===== ===== =====')
             if (debug) console.log(`iteration: ${iterations}, queue size: ${toVisit.size}`)
-
-            if (iterations % 1000 == 0) console.log(`iteration: ${iterations}, queue size: ${toVisit.size}`)
+            if (progressEvery && iterations % progressEvery == 0) console.log(`iteration: ${iterations}, queue size: ${toVisit.size}`)
 
             // Pop off the new value we're working on
             let currentNode = toVisit.first()
