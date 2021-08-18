@@ -22,7 +22,6 @@ export function makeSolver({
             state: null,
             previousNode: null,
             step: null,
-            distance: 0,
             score: 0,
         })
 
@@ -70,7 +69,7 @@ export function makeSolver({
 
             // Pop off the new value we're working on
             let currentNode = toVisit.first()
-            let { state: currentState, previousNode, step, distance, score } = currentNode
+            let { state: currentState, previousNode, step, score } = currentNode
             if (debug) console.log(`currentNode: ${currentNode.toJSON()}`)
             if (debug) console.log(`current steps to node: ${stepsTo(currentNode)}`)
             toVisit = toVisit.shift()
@@ -108,7 +107,7 @@ export function makeSolver({
                 if (debug) console.log(`duplicate state found`)
 
                 let visitedPreviousNode = visited.get(currentState)
-                if (distance < visitedPreviousNode.distance) {
+                if (stepsTo(currentNode).length < stepsTo(visitedPreviousNode).length) {
                     if (debug) console.log(`better path found`)
                     if (debug) console.log('previousNode', visitedPreviousNode.toJSON())
                     if (debug) console.log('currentNode', currentNode.toJSON())
@@ -131,7 +130,6 @@ export function makeSolver({
                     state: nextState,
                     previousNode: currentNode,
                     step: step,
-                    distance: distance + 1,
                 })
 
                 // Depth first search adds to the beginning (search these before all current nodes)
@@ -197,7 +195,7 @@ export function makeSolver({
 
         for (let state of solutions) {
             let node = visited.get(state)
-            if (shortestSolvedNode === null || node.distance < shortestSolvedNode.distance) {
+            if (shortestSolvedNode === null || stepsTo(node).length < stepsTo(shortestSolvedNode).length) {
                 shortestSolvedNode = node
             }
         }

@@ -4,6 +4,8 @@ import { Map, List, Set, Record, fromJS } from 'immutable'
 import { exit } from 'process'
 
 let DEBUG = false
+let PROGRESS_EVERY
+let TIMEOUT
 
 const SNAKE_BOUNDS = [
     { min: 'A', max: 'Z' },
@@ -259,14 +261,39 @@ let generateNextStates = function* (state) {
     }
 }
 
-let solveSnakebird = makeSolver({ returnFirst: false, searchMode: 'bfs', debug: DEBUG, generateNextStates, isValid, isSolved })
+if (process.argv.includes('--debug')) {
+    DEBUG = true;
+    process.argv.splice(process.argv.indexOf('--debug'), 1)
+}
+
+if (process.argv.includes('--progress')) {
+    let index = process.argv.indexOf('--progress')
+    PROGRESS_EVERY = parseInt(process.argv[index + 1]);
+    process.argv.splice(index, 2)
+}
+
+if (process.argv.includes('--timeout')) {
+    let index = process.argv.indexOf('--timeout')
+    TIMEOUT = parseInt(process.argv[index + 1]);
+    process.argv.splice(index, 2)
+}
+
+if (DEBUG) {
+    console.log(`Options: DEBUG=${DEBUG}, PROGRESS_EVERY=${PROGRESS_EVERY}, TIMEOUT=${TIMEOUT}`)
+}
+
+let solveSnakebird = makeSolver({
+    returnFirst: false,
+    searchMode: 'bfs',
+    debug: DEBUG,
+    progressEvery: PROGRESS_EVERY,
+    maxTime: TIMEOUT,
+    generateNextStates,
+    isValid,
+    isSolved
+})
 
 process.argv.slice(2).forEach(path => {
-    if (path == 'DEBUG') {
-        DEBUG = true;
-        return
-    }
-
     console.log(`===== ${path} =====`)
 
     // Initial state
@@ -277,6 +304,16 @@ process.argv.slice(2).forEach(path => {
     let solution = solveSnakebird(state)
     console.log('time taken:', solution.duration)
     console.log('iterations:', solution.iterations)
+
+    // Did we find a solution?
+    if (solution.error) {
+        console.log('error:', solution.error)
+        return
+    }
+    if (!solution.steps) {
+        console.log('error: no steps returned (so solution found)')
+        return
+    }
 
     // Print long version of steps
     console.log('raw steps:', solution.steps.join(' '))
