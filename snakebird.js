@@ -1,11 +1,21 @@
 import fs from 'fs'
 import { makeSolver } from './solvers/immutable.js'
-import { Map, List, Set, Record, fromJS } from 'immutable'
-import { exit } from 'process'
+import { List, Set, Record } from 'immutable'
+import { ArgumentParser } from 'argparse'
 
-let DEBUG = false
-let PROGRESS_EVERY
-let TIMEOUT
+/* Parse parameters */
+
+let parser = new ArgumentParser({ description: 'Solve Snakebird levels' })
+parser.add_argument('--debug', { action: 'store_true', help: 'Turn on debug mode' })
+parser.add_argument('--optimize', { action: 'store_true', help: 'Return the shortest solution, false/default returns the first found' })
+parser.add_argument('--progress', { type: 'int', help: 'Print progress every N iterations (default: does not print)' })
+parser.add_argument('--timeout', { type: 'int', help: 'Only try to solve for N seconds (default: no timeout)' })
+parser.add_argument('--mode', { choices: ['bfs', 'dsf', 'function'], default: 'dfs', help: 'Search mode' })
+parser.add_argument('--gc', { action: 'store_true', help: 'Aggressively run garbage collection whenever an invalid state is found' })
+parser.add_argument('files', { nargs: '+', help: 'Levels to load and solve' })
+let args = parser.parse_args()
+
+if (args.debug) { console.log('Parameters:', args) }
 
 const SNAKE_BOUNDS = [
     { min: 'A', max: 'Z' },
@@ -164,14 +174,41 @@ let isSolved = function (state) {
     return state.fruits.size == 0 && state.snakes.every(snake => snake == null)
 }
 
+let score = function (state) {
+    let score = 0
+
+    // Lower score for each fruit eaten
+    score -= 100 * state.fruits.size
+
+    // Lower score for each snake that's exited
+    score -= 1000 * state.snakes.filter(snake => snake == null).length
+
+    // Absolute distance from each snake to the nearest fruit or to the exit (if no fruit)
+    state.snakes.forEach(snake => {
+        if (snake == null) return
+
+        if (state.fruits.size > 0) {
+            score -= state.fruits.reduce(
+                (min, fruit) => Math.min(min, Math.abs(snake.get(0).r - fruit.r) + Math.abs(snake.get(0).c - fruit.c)),
+                Infinity
+            )
+        } else {
+            score -= 10 * Math.abs(snake.get(0).r - state.exit.r) + Math.abs(snake.get(0).c - state.exit.c)
+        }
+    })
+
+    return score
+}
+
 let generateNextStates = function* (state) {
-    //if (DEBUG) console.clear()
-    if (DEBUG) console.log(snakebirdToString(state))
-    if (DEBUG) console.log('fruits left', state.fruits.size)
-    if (DEBUG) console.log('snakes left', state.snakes.filter(snake => snake != null).size)
+    //if (args.debug) console.clear()
+    if (args.debug) console.log(snakebirdToString(state))
+    if (args.debug) console.log('fruits left', state.fruits.size)
+    if (args.debug) console.log('snakes left', state.snakes.filter(snake => snake != null).size)
 
     // handle hitting the exits (including by falling)
     // can only exit if there are no fruits left
+    // TODO: can you fall into the exit? if not, move this block after gravity
     if (state.fruits.size == 0) {
         for (let i = 0; i < state.snakes.size; i++) {
             let snake = state.snakes.get(i)
@@ -180,7 +217,7 @@ let generateNextStates = function* (state) {
             // if we hit an exit, remove this snake
             // only remove one snake per iteration
             if (snake.some(pt => pt.equals(state.exit))) {
-                if (DEBUG) console.log(`snake ${i} (${SNAKE_BOUNDS[i].min}-${SNAKE_BOUNDS[i].max}) exiting`)
+                if (args.debug) console.log(`snake ${i} (${SNAKE_BOUNDS[i].min}-${SNAKE_BOUNDS[i].max}) exiting`)
 
                 yield {
                     state: state.set('snakes', state.get('snakes').set(i, null)),
@@ -209,7 +246,7 @@ let generateNextStates = function* (state) {
                 continue gravityEachSnake
         }
 
-        if (DEBUG) console.log(`snake ${i} (${SNAKE_BOUNDS[i].min}-${SNAKE_BOUNDS[i].max}) falling`)
+        if (args.debug) console.log(`snake ${i} (${SNAKE_BOUNDS[i].min}-${SNAKE_BOUNDS[i].max}) falling`)
 
         // if we made it this far, the snake should fall one point
         let newSnake = snake.map(pt => pt.set('r', pt.get('r') + 1))
@@ -250,7 +287,7 @@ let generateNextStates = function* (state) {
             if (ateFruit) {
                 newState = newState.set('fruits', newState.get('fruits').remove(pt))
             }
-            if (DEBUG) console.log('newState', newState.toJSON())
+            if (args.debug) console.log('newState', newState.toJSON())
 
             yield {
                 state: newState,
@@ -261,39 +298,22 @@ let generateNextStates = function* (state) {
     }
 }
 
-if (process.argv.includes('--debug')) {
-    DEBUG = true;
-    process.argv.splice(process.argv.indexOf('--debug'), 1)
-}
 
-if (process.argv.includes('--progress')) {
-    let index = process.argv.indexOf('--progress')
-    PROGRESS_EVERY = parseInt(process.argv[index + 1]);
-    process.argv.splice(index, 2)
-}
-
-if (process.argv.includes('--timeout')) {
-    let index = process.argv.indexOf('--timeout')
-    TIMEOUT = parseInt(process.argv[index + 1]);
-    process.argv.splice(index, 2)
-}
-
-if (DEBUG) {
-    console.log(`Options: DEBUG=${DEBUG}, PROGRESS_EVERY=${PROGRESS_EVERY}, TIMEOUT=${TIMEOUT}`)
-}
+/* COMMAND LINE PROCESSING */
 
 let solveSnakebird = makeSolver({
-    returnFirst: false,
-    searchMode: 'bfs',
-    debug: DEBUG,
-    progressEvery: PROGRESS_EVERY,
-    maxTime: TIMEOUT,
     generateNextStates,
     isValid,
-    isSolved
+    isSolved,
+    returnFirst: !args.optimize,
+    searchMode: args.mode === 'function' ? score : args.mode,
+    debug: args.debug,
+    progressEvery: args.progress,
+    maxTime: args.timeout,
+    aggressiveGC: args.gc,
 })
 
-process.argv.slice(2).forEach(path => {
+args.files.forEach(path => {
     console.log(`===== ${path} =====`)
 
     // Initial state

@@ -1,4 +1,7 @@
 import { Map, List, Set, Record, fromJS } from 'immutable'
+import process from 'process'
+import humanize from 'humanize'
+import humanizeDuration from 'humanize-duration'
 
 export function makeSolver({
     generateNextStates, // state -> [{state, step: String}, ...] // The string is a description of the step
@@ -9,12 +12,14 @@ export function makeSolver({
     debug,              // Boolean: Is debug mode set
     progressEvery,      // Integer: Print progress every N iterations (0/undefined to disable)
     maxTime,            // Integer: If set, don't run more than this many seconds
+    aggressiveGC,       // Boolean: Should we try to run the garbage collector every time we visit an invalid node (warning: this is much slower)
 }) {
 
     // Takes a state and returns {state, steps, iterations}
     // If returnFirst is set, return the first solution we find; if not, keep looking and return the shortest solution
     return (state) => {
         let startTime = Date.now()
+        let maxRAM = 0
         let error = null
 
         // Each node stores a state, and the shortest way to get to it
@@ -64,8 +69,18 @@ export function makeSolver({
         while (toVisit.size > 0) {
             iterations++
             if (debug) console.log('===== ===== ===== ===== =====')
-            if (debug) console.log(`iteration: ${iterations}, queue size: ${toVisit.size}`)
-            if (progressEvery && iterations % progressEvery == 0) console.log(`iteration: ${iterations}, queue size: ${toVisit.size}`)
+
+            if (debug || (progressEvery && iterations % progressEvery == 0)) {
+                console.log([
+                    `time: ${humanizeDuration(Date.now() - startTime)}`,
+                    `iteration: ${iterations}`,
+                    `queue size: ${toVisit.size}`,
+                    `solutions: ${solutions.size}`,
+                    `memory usage: ${humanize.filesize(process.memoryUsage()['heapUsed'])} / ${humanize.filesize(process.memoryUsage()['heapTotal'])}`
+                ].join(', '))
+            }
+
+            maxRAM = Math.max(maxRAM, process.memoryUsage()['heapUsed'])
 
             // Pop off the new value we're working on
             let currentNode = toVisit.first()
@@ -77,12 +92,23 @@ export function makeSolver({
             // If this state is invalid, discard it and move on
             if (!isValid(currentState)) {
                 if (debug) console.log('invalid state found')
+
+                if (aggressiveGC) {
+                    if (global.gc) {
+                        if (debug) console.log('Forcing garbage collection')
+                        global.gc();
+                    } else {
+                        console.warn('Aggressive GC requested, but GC is not enabled, run node with --expose-gc')
+                        process.exit();
+                    }
+                }
+
                 continue
             }
 
             // If we have a solution:
             // - If we're returning the first solution, return it and steps to get to it
-            // - If not, record it
+            // - If not, record it; don't continue processing from solutions that way lies infinite loops
             if (isSolved(currentState)) {
                 if (debug) console.log('solution found')
 
@@ -92,10 +118,12 @@ export function makeSolver({
                         steps: stepsTo(currentNode),
                         iterations,
                         duration: (Date.now() - startTime) / 1000,
-                        error
+                        error,
+                        maxRAM,
                     }
                 } else {
                     solutions = solutions.add(currentState)
+                    continue
                 }
             }
 
@@ -204,6 +232,7 @@ export function makeSolver({
             iterations,
             duration: (Date.now() - startTime) / 1000,
             error,
+            maxRAM,
         }
 
         if (shortestSolvedNode) {

@@ -11,6 +11,9 @@
   "description": "",
   "type": "module",
   "dependencies": {
+    "argparse": "^2.0.1",
+    "humanize": "^0.0.9",
+    "humanize-duration": "^3.27.0",
     "immutable": "^4.0.0-rc.12",
     "immutable-sorted": "^0.2.11",
     "json-stable-stringify": "^1.0.1",
